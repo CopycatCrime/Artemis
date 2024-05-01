@@ -1,16 +1,44 @@
-# This is a sample Python script.
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+import traceback
+import discord
+import os
+from discord.ext import commands
+
+intent = discord.Intents.all()
+
+Cogs = []
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+class Artemis(commands.Bot):
+    def __init__(self, **kwargs):
+        intents = discord.Intents.all()
+        super().__init__(command_prefix=commands.when_mentioned_or('$'), intents=intents, **kwargs, pm_help=None,
+                         help_attrs=dict(hidden=True))
+
+    async def setup_hook(self) -> None:
+        for extension in Cogs:
+            try:
+                await self.load_extension(extension)
+            except Exception as e:
+                print('Could not load extension {0} due to {1.__class__.__name__}: {1}'.format(
+                    extension, e))
+        await self.tree.sync()
+
+    async def on_ready(self):
+        print('Logged on as {0} (ID: {0.id})'.format(self.user))
+
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.CheckFailure):
+            return
+
+        orig_error = getattr(error, "original", error)
+        error_msg = ''.join(traceback.TracebackException.from_exception(orig_error).format())
+        error_msg = "```py\n" + error_msg + "\n```"
+        await ctx.send(error_msg)
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+bot = Artemis()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+bot.run(os.environ['TOKEN'])
